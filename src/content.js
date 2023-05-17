@@ -10,69 +10,91 @@ chrome.storage.sync.get(['apiKey', 'language', 'replacementPercentage'], functio
         var node = element.childNodes[j];
         if(node.nodeType === 3) {  // text node
           var text = node.nodeValue;
-          var splitText = text.split(' ');
-          for(var k = 0; k < splitText.length; k++) {
-            // Only add the word if it is not capitalized
-            if(splitText[k] && !splitText[k].match(/^[A-Z]/) && Math.random() < result.replacementPercentage / 100) {
-              words.add(splitText[k]);  // Add the word to the Set
+          text.replace(/\b([a-zA-Z]{3,})\b/g, function(match) {  // Match words of 3 or more letters
+            if (!match.match(/^[A-Z]/) && Math.random() < result.replacementPercentage / 100) {
+              words.add(match);  // Add the word to the Set
             }
-          }
+            return match;  // Return the original match
+          });
         }
       }
     }
 
-    // Convert the Set back to an Array for the join operation
-    words = Array.from(words);
+    // Create an object to store translations
+    var translations = {};
 
-    // Send the text to the OpenAI translation API
-    var text = words.join(" $$$ ");
-    var prompt = "Translate the following English text to " + result.language + ", keeping ' $$$ ' as a delimiter: '" + text + "'";
+    // Convert Set to Array
+    var wordsArray = Array.from(words);
 
-    chrome.runtime.sendMessage({contentScriptQuery: "translateText", prompt: prompt}, function(response) {
-      if(chrome.runtime.lastError) {
-        // An error occurred
-        console.log("ERROR: ", chrome.runtime.lastError);
-      } else if(response) {
-        // We have a response
-        if(response.error) {
-          // The API returned an error
-          console.log("API ERROR: ", response.error);
-        } else if(response.translatedText) {
-          console.log("TRANSLATED TEXT: ", response.translatedText);
-          // Remove the delimiter from the translated text
-          var cleanedText = response.translatedText.replace(/ \$\$\$ /g, ' ');
+    // Chunk the wordsArray into groups of 50
+    var chunks = [];
+    for (var i = 0; i < wordsArray.length; i += 50) {
+      chunks.push(wordsArray.slice(i, i + 50));
+    }
 
-          // Split the cleaned text back into individual words
-          var translatedWords = cleanedText.split(" ");
-    
-          // Create a translations object
-          var translations = {};
-          var wordsArray = Array.from(words);
-          for(var i = 0; i < wordsArray.length; i++) {
-            translations[wordsArray[i]] = translatedWords[i];
+    // Send each chunk to the translation API
+    chunks.forEach(function(chunk) {
+      var text = chunk.join(", ");
+      var prompt = "Translate the following English words to " + result.language + ": '" + text + "'";
+
+      chrome.runtime.sendMessage({contentScriptQuery: "translateText", prompt: prompt}, function(response) {
+        if(chrome.runtime.lastError) {
+          // An error occurred
+          console.log("ERROR: ", chrome.runtime.lastError);
+        } else if(response) {
+          // We have a response
+          if(response.error) {
+            // The API returned an error
+            console.log("API ERROR: ", response.error);
+          } else if(response.translatedText) {
+            console.log("TRANSLATED TEXT: ", response.translatedText);
+            // Split the translated text back into individual words
+            var translatedWords = response.translatedText.split(", ");
+
+            // Store the translations
+            for (var i = 0; i < chunk.length; i++) {
+              translations[chunk[i]] = translatedWords[i];
+            }
+          } else {
+            console.log("Unexpected response: ", response);
           }
-    
-          // Replace the original words with the translated words in the page
-          for(var i = 0; i < elements.length; i++) {
-            var element = elements[i];
-            for(var j = 0; j < element.childNodes.length; j++) {
-              var node = element.childNodes[j];
-              if(node.nodeType === 3) {  // text node
-                var text = node.nodeValue;
-                var splitText = text.split(' ');
-                for(var k = 0; k < splitText.length; k++) {
-                  if(translations[splitText[k]]) {
-                    splitText[k] = translations[splitText[k]];
-                  }
+        }
+      });
+    });
+
+    // Wait for all translations to finish & replace the original words with translations
+    var interval = setInterval(function() {
+      if(Object.keys(translations).length === words.size) {
+        clearInterval(interval);
+
+        // Replace the original words with the translated words in the page
+        for(var i = 0; i < elements.length; i++) {
+          var element = elements[i];
+          for(var j = 0; j < element.childNodes.length; j++) {
+            var node = element.childNodes[j];
+            if(node.nodeType === 3) {  // text node
+              var text = node.nodeValue;
+              text = text.replace(/\b([a-zA-Z]{3,})\b/g, function(match) {  // Match words of 3 or more letters
+                var translated = translations[match];
+                if (translated) {
+                  return '<span class="translated-word" title="' + match + '">' + translated + '</span>';
+                } else {
+                  return match;
                 }
-                node.nodeValue = splitText.join(' ');
-              }
+              });
+
+              var parent = node.parentNode;
+              var span = document.createElement('span');
+              span.className = 'translated-word';
+              span.title = match;
+              span.textContent = translations[match];
+              parent.replaceChild(span, node);
+
+              node.nodeValue = text;
             }
           }
-        } else {
-          console.log("Unexpected response: ", response);
         }
       }
-    });
+    }, 100);
   }
 });
