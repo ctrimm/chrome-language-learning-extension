@@ -1,0 +1,23 @@
+{
+  "name": "Aprendendo",
+  "description": "Learn a foreign language while you browse the web.",
+  "version": "1.0",
+  "manifest_version": 3,
+  "permissions": [
+    "activeTab",
+    "storage"
+  ],
+  "action": {
+    "default_popup": "settings.html",
+    "default_icon": "aprendendo_logo.png"
+  },
+  "background": {
+    "scripts": ["background.js"]
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"]
+    }
+  ]
+}
