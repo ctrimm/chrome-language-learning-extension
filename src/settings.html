@@ -2,9 +2,18 @@
 <html>
   <body>
     <h1>Aprendendo</h1>
+    <label for="apiKey">OpenAI API Key:</label><br>
+    <input type="text" id="apiKey" name="apiKey"><br>
+    <label for="language">Language:</label><br>
+    <select id="language" name="language">
+      <option value="Brazilian Portuguese">Brazilian Portuguese</option>
+      <option value="Spanish">Spanish</option>
+      <option value="French">French</option>
+      <!-- Add more languages as needed -->
+    </select><br>
     <label for="replacementPercentage">Word Replacement Percentage:</label><br>
     <input type="number" id="replacementPercentage" name="replacementPercentage" min="0" max="100"><br>
     <button id="saveButton">Save</button>
-    <script src="popup.js"></script>
+    <script src="settings.js"></script>
   </body>
 </html>
