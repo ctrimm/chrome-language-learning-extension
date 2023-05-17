@@ -18,7 +18,7 @@
     {
       "matches": ["https://*.ycombinator.com/*"],
       "js": ["content.js"],
-      "css": ["style.css"]
+      "css": ["styles.css"]
     }
   ]
 }

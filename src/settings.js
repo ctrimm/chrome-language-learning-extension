@@ -15,12 +15,17 @@ window.onload = function() {
 
 // Save the values when the save button is clicked
 document.getElementById('saveButton').addEventListener('click', function() {
-  var apiKey = document.getElementById('apiKey').value;
-  var language = document.getElementById('language').value;
-  var replacementPercentage = document.getElementById('replacementPercentage').value;
-
-  // Save these values using chrome.storage
-  chrome.storage.sync.set({'apiKey': apiKey, 'language': language, 'replacementPercentage': replacementPercentage}, function() {
-    console.log("Settings saved");
+  // Save settings to chrome.storage.sync
+  chrome.storage.sync.set({
+    apiKey: document.getElementById('apiKey').value,
+    language: document.getElementById('language').value,
+    replacementPercentage: document.getElementById('replacementPercentage').value
+  }, function() {
+    // Update status to let user know options were saved.
+    var status = document.getElementById('status');
+    status.textContent = 'Settings saved successfully.';
+    setTimeout(function() {
+      status.textContent = '';
+    }, 3000);
   });
 });

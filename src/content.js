@@ -36,6 +36,7 @@ chrome.storage.sync.get(['apiKey', 'language', 'replacementPercentage'], functio
     chunks.forEach(function(chunk) {
       var text = chunk.join(", ");
       var prompt = "Translate the following English words to " + result.language + ": '" + text + "'";
+      console.log("ORIGINAL TEXT: ", text);
 
       chrome.runtime.sendMessage({contentScriptQuery: "translateText", prompt: prompt}, function(response) {
         if(chrome.runtime.lastError) {
@@ -62,7 +63,7 @@ chrome.storage.sync.get(['apiKey', 'language', 'replacementPercentage'], functio
       });
     });
 
-    // Wait for all translations to finish & replace the original words with translations
+    // Wait for all translations to finish
     var interval = setInterval(function() {
       if(Object.keys(translations).length === words.size) {
         clearInterval(interval);
@@ -77,19 +78,11 @@ chrome.storage.sync.get(['apiKey', 'language', 'replacementPercentage'], functio
               text = text.replace(/\b([a-zA-Z]{3,})\b/g, function(match) {  // Match words of 3 or more letters
                 var translated = translations[match];
                 if (translated) {
-                  return '<span class="translated-word" title="' + match + '">' + translated + '</span>';
+                  return translated;
                 } else {
                   return match;
                 }
               });
-
-              var parent = node.parentNode;
-              var span = document.createElement('span');
-              span.className = 'translated-word';
-              span.title = match;
-              span.textContent = translations[match];
-              parent.replaceChild(span, node);
-
               node.nodeValue = text;
             }
           }
